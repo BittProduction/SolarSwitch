@@ -1,23 +1,49 @@
-﻿namespace SolarSwitch;
+﻿using Newtonsoft.Json;
+using SolarSwitch.Models;
+using SolarSwitch.Service;
+
+namespace SolarSwitch;
 
 public partial class MainPage : ContentPage
 {
-    int count = 0;
+    
+    HttpClient _httpClient = new HttpClient();
 
+    private string _loginURL { get; } = "https://app-gateway.prod.senec.dev/v1/senec/login";
+    
+    
     public MainPage()
     {
         InitializeComponent();
+        
     }
 
-    private void OnCounterClicked(object sender, EventArgs e)
+    private async void OnCounterClicked(object sender, EventArgs e)
     {
-        count++;
+        LoginRequestModel loginModel = new LoginRequestModel
+        {
+            User = "Familiebittnerwaldkirch@gmail.com",
+            Password = "M.Counter#Senec2807"
+        };
 
-        if (count == 1)
-            CounterBtn.Text = $"Clicked {count} time";
-        else
-            CounterBtn.Text = $"Clicked {count} times";
-
-        SemanticScreenReader.Announce(CounterBtn.Text);
+        try
+        {
+            var result = await HTTPService.Instance.LoginAsync(loginModel);
+            // convert the result to JSON
+            var jsonResponse = await result.Content.ReadAsStringAsync();
+            // Deserialize the JSON response to SenecAuthenticationModel
+            var senecAuth = JsonConvert.DeserializeObject<LoginResultModel>(jsonResponse);
+            
+            await HTTPService.Instance.GetSenecDashboardAsync(new SenecDashboardRequestModel()
+            {
+                Anlage = "317348",
+                Token = senecAuth.Token
+            });
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine(exception);
+        }
+        
     }
 }
